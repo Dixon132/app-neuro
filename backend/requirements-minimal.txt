@@ -1,0 +1,39 @@
+# Requirements mínimos para desarrollo rápido
+# Instalar con: pip install -r requirements-minimal.txt
+
+# FastAPI Core
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0
+
+# Utils
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+aiofiles>=23.0.0
+
+# Data Science (versiones flexibles)
+numpy
+scipy
+pandas
+
+# ML (CPU version - más ligero)
+torch --index-url https://download.pytorch.org/whl/cpu
+transformers
+huggingface-hub
+
+# EEG Processing
+mne
+PyWavelets
+
+# PDF Generation
+reportlab
+matplotlib

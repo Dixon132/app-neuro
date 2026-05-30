@@ -1,29 +1,42 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
 import os
 import shutil
 from app.database.connection import get_db
-from app.models.user import Analysis, Report
+from app.models.user import Analysis, Report, User
 from app.models.schemas import AnalysisResponse
 from app.services.eeg_processor import EEGProcessor
 from app.services.ml_predictor import MLPredictor
 from app.services.report_generator import ReportGenerator
+from app.services.auth_service import get_current_user
 from app.config import settings
 import json
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+def _get_user_id(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> int:
+    """Obtiene el user_id real del token JWT."""
+    username = get_current_user(token)
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    return user.id
+
 
 @router.post("/upload", response_model=AnalysisResponse)
 async def upload_eeg(
     file: UploadFile = File(...),
-    user_id: int = 1,  # Simplificado, debería venir del token
     db: Session = Depends(get_db),
+    user_id: int = Depends(_get_user_id),
 ):
-    """Subir y analizar archivo EEG"""
+    """Subir y analizar archivo EEG — usuario autenticado por JWT"""
 
     # Validar formato
     if not file.filename.endswith((".edf", ".csv")):
@@ -117,10 +130,15 @@ async def upload_eeg(
 
 
 @router.get("/list", response_model=list[AnalysisResponse])
-def list_analyses(user_id: int = 1, db: Session = Depends(get_db)):
-    """Listar análisis del usuario"""
-    analyses = db.query(Analysis).filter(Analysis.user_id == user_id).all()
+def list_analyses(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(_get_user_id),
+):
+    """Listar análisis del usuario autenticado (solo los suyos)"""
+    analyses = db.query(Analysis).filter(Analysis.user_id == user_id).order_by(Analysis.created_at.desc()).all()
     return analyses
+
+
 
 
 @router.get("/{analysis_id}", response_model=AnalysisResponse)

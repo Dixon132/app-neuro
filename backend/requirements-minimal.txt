@@ -24,6 +24,8 @@ aiofiles>=23.0.0
 numpy
 scipy
 pandas
+scikit-learn
+joblib
 
 # ML (CPU version - más ligero)
 torch --index-url https://download.pytorch.org/whl/cpu

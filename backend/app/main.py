@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
-from app.database.connection import init_db
+from app.database.connection import init_db, get_db
 from app.api.routes import auth, analysis
+from app.api.routes import admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,6 +12,13 @@ async def lifespan(app: FastAPI):
     print("🚀 Iniciando servidor...")
     init_db()
     print("✅ Base de datos inicializada")
+    # Ensure default admin exists
+    from app.services.auth_service import ensure_admin_exists
+    db = next(get_db())
+    try:
+        ensure_admin_exists(db)
+    finally:
+        db.close()
     print(f"📡 API disponible en: http://localhost:8000")
     print(f"📚 Documentación en: http://localhost:8000/docs")
     yield
@@ -23,19 +31,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS - Configuración permisiva para desarrollo
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos los orígenes
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos los métodos (GET, POST, etc.)
-    allow_headers=["*"],  # Permite todos los headers
-    expose_headers=["*"],  # Expone todos los headers
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Rutas
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(analysis.router, prefix=settings.API_PREFIX)
+app.include_router(admin.router, prefix=settings.API_PREFIX)
 
 @app.get("/")
 def root():

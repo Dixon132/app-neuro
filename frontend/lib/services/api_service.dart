@@ -9,7 +9,10 @@ class ApiService {
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _storage.getToken();
-    return {if (token != null) 'Authorization': 'Bearer $token'};
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
   }
 
   Future<Map<String, dynamic>> login(String username, String password) async {
@@ -22,7 +25,24 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Login failed: ${response.body}');
+      final err = jsonDecode(response.body);
+      throw Exception(err['detail'] ?? 'Login fallido');
+    }
+  }
+
+  Future<Map<String, dynamic>> adminLogin(
+      String username, String password) async {
+    final response = await http.post(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username, 'password': password}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final err = jsonDecode(response.body);
+      throw Exception(err['detail'] ?? 'Acceso denegado');
     }
   }
 
@@ -36,14 +56,13 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Registration failed: ${response.body}');
+      final err = jsonDecode(response.body);
+      throw Exception(err['detail'] ?? 'Registro fallido');
     }
   }
 
   Future<Map<String, dynamic>> uploadEEGBytes(
-    Uint8List fileBytes,
-    String fileName,
-  ) async {
+      Uint8List fileBytes, String fileName) async {
     final token = await _storage.getToken();
     final request = http.MultipartRequest(
       'POST',
@@ -54,7 +73,6 @@ class ApiService {
       request.headers['Authorization'] = 'Bearer $token';
     }
 
-    // Usar bytes en lugar de path (compatible con web)
     request.files.add(
       http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
     );
@@ -65,7 +83,6 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      // Intentar extraer el mensaje de detalle del backend
       String errorDetail;
       try {
         final errorBody = jsonDecode(response.body);
@@ -80,8 +97,7 @@ class ApiService {
   Future<List<dynamic>> getAnalysisList() async {
     final response = await http.get(
       Uri.parse(
-        '${AppConstants.apiBaseUrl}${AppConstants.analysisListEndpoint}',
-      ),
+          '${AppConstants.apiBaseUrl}${AppConstants.analysisListEndpoint}'),
       headers: await _getHeaders(),
     );
 
@@ -115,7 +131,6 @@ class ApiService {
       return response.bodyBytes;
     }
 
-    // Extraer mensaje de detalle del backend
     String errorDetail;
     try {
       final errorBody = jsonDecode(response.body);
@@ -123,6 +138,58 @@ class ApiService {
     } catch (_) {
       errorDetail = response.body;
     }
-    throw Exception('Download failed (${response.statusCode}): $errorDetail');
+    throw Exception(
+        'Download failed (${response.statusCode}): $errorDetail');
+  }
+
+  // ─── Admin endpoints ───────────────────────────────────────────────
+  Future<List<dynamic>> getAdminPatients() async {
+    final response = await http.get(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/patients'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Error al cargar pacientes');
+  }
+
+  Future<Map<String, dynamic>> getAdminStats() async {
+    final response = await http.get(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/stats'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Error al cargar estadísticas');
+  }
+
+  Future<Map<String, dynamic>> createAdmin(
+      Map<String, dynamic> adminData) async {
+    final response = await http.post(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/create-admin'),
+      headers: await _getHeaders(),
+      body: jsonEncode(adminData),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    final err = jsonDecode(response.body);
+    throw Exception(err['detail'] ?? 'Error al crear admin');
+  }
+
+  Future<List<dynamic>> getAdmins() async {
+    final response = await http.get(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/admins'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Error al cargar administradores');
+  }
+
+  Future<void> deleteAdmin(int adminId) async {
+    final response = await http.delete(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/admins/$adminId'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode != 200) {
+      final err = jsonDecode(response.body);
+      throw Exception(err['detail'] ?? 'Error al eliminar administrador');
+    }
   }
 }

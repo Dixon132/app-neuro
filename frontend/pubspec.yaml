@@ -29,7 +29,6 @@ dependencies:
   syncfusion_flutter_charts: ^24.1.41
   
   # UI
-  google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
   
   # Utils
@@ -42,6 +41,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/
-    - assets/icons/

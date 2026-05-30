@@ -28,13 +28,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _usernameController.text,
         _passwordController.text,
       );
-      
+
       final authState = ref.read(authProvider);
       if (authState.isAuthenticated && mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        // Route based on role
+        final role = authState.user?.role ?? 'user';
+        if (role == 'admin') {
+          Navigator.pushReplacementNamed(context, '/admin-dashboard');
+        } else {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       } else if (authState.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authState.error!)),
+          SnackBar(
+            content: Text(authState.error!),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
         );
       }
     }
@@ -61,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'EEG Analysis',
+                    'Análisis EEG',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryColor,
@@ -112,6 +124,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Navigator.pushNamed(context, '/register');
                     },
                     child: const Text('¿No tienes cuenta? Regístrate'),
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/admin-login');
+                    },
+                    icon: const Icon(Icons.admin_panel_settings_outlined,
+                        size: 16, color: Colors.black45),
+                    label: const Text(
+                      'Acceso Administrador',
+                      style: TextStyle(color: Colors.black45, fontSize: 12),
+                    ),
                   ),
                 ],
               ),

@@ -61,16 +61,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await _apiService.login(username, password);
       await _storage.saveToken(response['access_token']);
-      
-      // Simular datos de usuario (en producción vendría del backend)
-      final user = UserModel(
-        id: 1,
-        email: '$username@example.com',
-        username: username,
-        fullName: username,
-        role: 'user',
-      );
-      
+
+      final userData = response['user'] ?? {
+        'id': 1,
+        'email': '$username@example.com',
+        'username': username,
+        'full_name': username,
+        'role': response['role'] ?? 'user',
+      };
+
+      final user = UserModel.fromJson(userData);
       await _storage.saveUser(user.toJson());
       state = state.copyWith(
         isAuthenticated: true,
@@ -80,7 +80,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> adminLogin(String username, String password) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await _apiService.adminLogin(username, password);
+      await _storage.saveToken(response['access_token']);
+
+      final userData = response['user'];
+      final user = UserModel.fromJson(userData);
+      await _storage.saveUser(user.toJson());
+      state = state.copyWith(
+        isAuthenticated: true,
+        user: user,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceFirst('Exception: ', ''),
       );
     }
   }
@@ -89,7 +111,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final response = await _apiService.register(userData);
-      final user = UserModel.fromJson(response);
+      // Register now returns a token + user, same as login
+      await _storage.saveToken(response['access_token']);
+      final user = UserModel.fromJson(response['user']);
       await _storage.saveUser(user.toJson());
       state = state.copyWith(
         isAuthenticated: true,
@@ -99,7 +123,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: e.toString().replaceFirst('Exception: ', ''),
       );
     }
   }

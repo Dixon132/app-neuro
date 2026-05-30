@@ -26,7 +26,7 @@ mne>=1.5.0
 PyWavelets>=1.4.0
 
 # File Processing
-pyedflib>=0.1.30
+# pyedflib removed (MNE can parse edf natively, avoids Windows build tools errors)
 h5py>=3.8.0
 
 # PDF Generation

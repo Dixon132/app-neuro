@@ -286,3 +286,48 @@ def get_signal_data(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo señal: {str(e)}")
+
+
+def _get_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    """Retorna el objeto User completo del token JWT."""
+    username = get_current_user(token)
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    return user
+
+
+@router.delete("/{analysis_id}")
+def delete_analysis(
+    analysis_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_get_user),
+):
+    """Elimina un análisis. El paciente solo puede borrar el suyo; el admin puede borrar cualquiera."""
+    analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Análisis no encontrado")
+
+    # Verificar permisos
+    if current_user.role != 'admin' and analysis.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar este análisis")
+
+    # Eliminar archivos del disco si existen
+    if analysis.file_path and os.path.exists(analysis.file_path):
+        try:
+            os.remove(analysis.file_path)
+        except Exception:
+            pass
+
+    # Eliminar reporte PDF si existe
+    if analysis.report and analysis.report.pdf_path:
+        if os.path.exists(analysis.report.pdf_path):
+            try:
+                os.remove(analysis.report.pdf_path)
+            except Exception:
+                pass
+
+    db.delete(analysis)
+    db.commit()
+    return {"message": "Análisis eliminado correctamente", "id": analysis_id}
+

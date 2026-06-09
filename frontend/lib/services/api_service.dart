@@ -192,4 +192,24 @@ class ApiService {
       throw Exception(err['detail'] ?? 'Error al eliminar administrador');
     }
   }
+
+  Future<void> deleteAnalysis(int analysisId) async {
+    final response = await http.delete(
+      Uri.parse('${AppConstants.apiBaseUrl}/analysis/$analysisId'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode != 200) {
+      final err = jsonDecode(response.body);
+      throw Exception(err['detail'] ?? 'Error al eliminar análisis');
+    }
+  }
+
+  Future<List<dynamic>> getAdminAllAnalyses(int patientId) async {
+    final response = await http.get(
+      Uri.parse('${AppConstants.apiBaseUrl}/admin/patients/$patientId/analyses'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Error al cargar análisis del paciente');
+  }
 }

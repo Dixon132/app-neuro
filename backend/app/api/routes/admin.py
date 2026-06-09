@@ -196,3 +196,24 @@ def get_global_stats(db: Session = Depends(get_db)):
             "low": low_risk,
         }
     }
+
+@router.get("/patients/{patient_id}/analyses")
+def list_patient_analyses(patient_id: int, db: Session = Depends(get_db)):
+    """Lista todos los análisis de un paciente específico (solo admin)."""
+    patient = db.query(User).filter(User.id == patient_id, User.role == "user").first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    analyses = db.query(Analysis).filter(Analysis.user_id == patient_id).order_by(Analysis.created_at.desc()).all()
+    return [{
+        "id": a.id,
+        "file_name": a.file_name,
+        "status": a.status,
+        "prediction": a.prediction,
+        "risk_score": a.risk_score,
+        "confidence": a.confidence,
+        "most_anomalous_channel": a.most_anomalous_channel,
+        "n_windows_analyzed": a.n_windows_analyzed,
+        "sampling_rate": a.sampling_rate,
+        "created_at": a.created_at.isoformat(),
+        "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+    } for a in analyses]

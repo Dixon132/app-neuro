@@ -1,3 +1,6 @@
+import sys
+if sys.platform == "win32" and sys.stdout:
+    sys.stdout.reconfigure(encoding='utf-8')
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager

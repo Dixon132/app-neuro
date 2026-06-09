@@ -63,7 +63,7 @@ def create_user(db: Session, user: UserCreate, role: str = "user"):
     db.refresh(db_user)
     return db_user
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = None):
+def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

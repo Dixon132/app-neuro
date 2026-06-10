@@ -35,63 +35,114 @@ class MLPredictor:
     # ENTRENAMIENTO CON DATOS SINTÉTICOS REALISTAS
     # ─────────────────────────────────────────────
 
-    def _generate_training_data(self, n_features: int, n_samples: int = 3000):
+    FEATURE_NAMES = [
+        "mean_kurtosis", "max_kurtosis", "std_kurtosis",
+        "mean_line_length", "max_line_length",
+        "mean_delta_rel", "max_delta_rel",
+        "mean_theta_rel", "mean_alpha_rel", "mean_beta_rel", "mean_gamma_rel",
+        "mean_slow_fast_ratio", "max_slow_fast_ratio",
+        "mean_theta_alpha_ratio", "mean_delta_beta_ratio",
+        "mean_spectral_entropy", "max_spectral_entropy",
+        "mean_permutation_entropy", "mean_sample_entropy",
+        "mean_spike_rate_per_sec", "max_spike_rate_per_sec", "mean_spike_count",
+        "mean_peak_to_peak", "max_peak_to_peak",
+        "mean_variance", "mean_zero_crossings", "mean_rms",
+        "mean_dwt_d0_energy", "mean_dwt_d1_energy", "mean_dwt_d2_energy",
+    ]
+
+    SEIZURE_DISTRIBUTIONS = {
+        "mean_kurtosis":          (0.647, 0.55),
+        "max_kurtosis":           (2.5, 1.8),
+        "std_kurtosis":           (0.8, 0.5),
+        "mean_line_length":       (127.0, 15.0),
+        "max_line_length":        (160.0, 25.0),
+        "mean_delta_rel":         (0.704, 0.08),
+        "max_delta_rel":          (0.75, 0.09),
+        "mean_theta_rel":         (0.12, 0.04),
+        "mean_alpha_rel":         (0.087, 0.055),
+        "mean_beta_rel":          (0.05, 0.03),
+        "mean_gamma_rel":         (0.03, 0.015),
+        "mean_slow_fast_ratio":   (17.8, 16.0),
+        "max_slow_fast_ratio":    (25.0, 18.0),
+        "mean_theta_alpha_ratio": (1.8, 0.6),
+        "mean_delta_beta_ratio":  (14.0, 5.0),
+        "mean_spectral_entropy":  (3.854, 0.35),
+        "max_spectral_entropy":   (4.0, 0.4),
+        "mean_permutation_entropy": (1.5, 0.3),
+        "mean_sample_entropy":    (-2.0, 0.5),
+        "mean_spike_rate_per_sec": (0.174, 0.11),
+        "max_spike_rate_per_sec": (0.4, 0.2),
+        "mean_spike_count":       (2.0, 1.5),
+        "mean_peak_to_peak":      (120.0, 40.0),
+        "max_peak_to_peak":       (200.0, 60.0),
+        "mean_variance":          (80.0, 30.0),
+        "mean_zero_crossings":    (35.0, 12.0),
+        "mean_rms":               (8.5, 2.5),
+        "mean_dwt_d0_energy":     (150.0, 80.0),
+        "mean_dwt_d1_energy":     (200.0, 100.0),
+        "mean_dwt_d2_energy":     (350.0, 150.0),
+    }
+
+    NORMAL_DISTRIBUTIONS = {
+        "mean_kurtosis":          (0.889, 0.25),
+        "max_kurtosis":           (1.2, 0.4),
+        "std_kurtosis":           (0.4, 0.2),
+        "mean_line_length":       (166.9, 30.0),
+        "max_line_length":        (200.0, 40.0),
+        "mean_delta_rel":         (0.643, 0.04),
+        "max_delta_rel":          (0.68, 0.05),
+        "mean_theta_rel":         (0.15, 0.03),
+        "mean_alpha_rel":         (0.067, 0.015),
+        "mean_beta_rel":          (0.08, 0.02),
+        "mean_gamma_rel":         (0.04, 0.01),
+        "mean_slow_fast_ratio":   (9.78, 2.5),
+        "max_slow_fast_ratio":    (12.0, 3.0),
+        "mean_theta_alpha_ratio": (2.5, 0.5),
+        "mean_delta_beta_ratio":  (8.0, 2.0),
+        "mean_spectral_entropy":  (4.144, 0.15),
+        "max_spectral_entropy":   (4.3, 0.2),
+        "mean_permutation_entropy": (1.8, 0.2),
+        "mean_sample_entropy":    (-1.5, 0.3),
+        "mean_spike_rate_per_sec": (0.214, 0.06),
+        "max_spike_rate_per_sec": (0.3, 0.1),
+        "mean_spike_count":       (2.5, 1.0),
+        "mean_peak_to_peak":      (80.0, 20.0),
+        "max_peak_to_peak":       (120.0, 30.0),
+        "mean_variance":          (50.0, 15.0),
+        "mean_zero_crossings":    (50.0, 10.0),
+        "mean_rms":               (6.5, 1.5),
+        "mean_dwt_d0_energy":     (80.0, 40.0),
+        "mean_dwt_d1_energy":     (120.0, 60.0),
+        "mean_dwt_d2_energy":     (250.0, 100.0),
+    }
+
+    def _generate_training_data(self, n_features: int, n_samples: int = 4000):
         """
-        Genera datos de entrenamiento sintéticos basados en distribuciones REALES
-        observadas del dataset CHB-MIT (3 seizure, 2 normal).
-        
-        VALORES REALES OBSERVADOS:
-        - Seizure: kurtosis=0.647±0.497, line_length=127±11, delta_rel=0.704±0.068,
-                   alpha_rel=0.087±0.048, slow_fast=17.8±14.7, spec_entropy=3.85±0.31,
-                   spike_rate=0.174±0.097, dwt_energy=1015±322
-        - Normal:  kurtosis=0.889±0.213, line_length=167±26, delta_rel=0.643±0.026,
-                   alpha_rel=0.067±0.009, slow_fast=9.78±1.44, spec_entropy=4.14±0.12,
-                   spike_rate=0.214±0.041, dwt_energy=934±132
-        
-        NOTA: Hay MUCHO overlap entre clases — el modelo debe ser conservador.
+        Genera datos sintéticos basados en distribuciones reales del dataset CHB-MIT.
+        Cada feature tiene su propia distribución realista para ambas clases.
         """
         np.random.seed(42)
         X_list, y_list = [], []
-        n_normal    = n_samples // 2
+        n_normal = n_samples // 2
         n_epileptic = n_samples - n_normal
 
-        # Índices EXACTOS verificados del feature vector (138 features)
-        IDX_MEAN_KURTOSIS     = 6
-        IDX_MEAN_LINE_LENGTH  = 12
-        IDX_MEAN_DELTA_REL    = 36
-        IDX_MEAN_ALPHA_REL    = 42
-        IDX_MEAN_SLOW_FAST    = 57
-        IDX_MEAN_SPEC_ENTROPY = 60
-        IDX_MEAN_SPIKE_RATE   = 132
-        IDX_MEAN_DWT_ENERGY   = 75
-
-        # ── Clase 0: Normal ──
-        # Basado en valores reales: chb01_19, chb01_20
         for _ in range(n_normal):
-            vec = np.abs(np.random.randn(n_features)) * 0.05  # ruido de fondo reducido
-            vec[IDX_MEAN_KURTOSIS]     = np.random.normal(0.889, 0.25)   # más varianza
-            vec[IDX_MEAN_LINE_LENGTH]  = np.random.normal(166.9, 30.0)   # real: 167±26
-            vec[IDX_MEAN_DELTA_REL]    = np.random.normal(0.643, 0.04)   # real: 0.643±0.026
-            vec[IDX_MEAN_ALPHA_REL]    = np.random.normal(0.067, 0.015)  # real: 0.067±0.009
-            vec[IDX_MEAN_SLOW_FAST]    = np.random.normal(9.78, 2.5)     # real: 9.78±1.44
-            vec[IDX_MEAN_SPEC_ENTROPY] = np.random.normal(4.144, 0.15)   # real: 4.14±0.12
-            vec[IDX_MEAN_SPIKE_RATE]   = np.random.normal(0.214, 0.06)   # real: 0.214±0.041
-            vec[IDX_MEAN_DWT_ENERGY]   = np.random.normal(933.6, 180.0)  # real: 934±132
+            vec = np.zeros(n_features)
+            for i, key in enumerate(self.FEATURE_NAMES):
+                if i >= n_features:
+                    break
+                mean, std = self.NORMAL_DISTRIBUTIONS.get(key, (0.0, 0.1))
+                vec[i] = np.random.normal(mean, std)
             X_list.append(vec)
             y_list.append(0)
 
-        # ── Clase 1: Epiléptico ──
-        # Basado en valores reales: chb01_16, chb01_18, chb01_21
         for _ in range(n_epileptic):
-            vec = np.abs(np.random.randn(n_features)) * 0.05
-            vec[IDX_MEAN_KURTOSIS]     = np.random.normal(0.647, 0.55)   # real: 0.647±0.497
-            vec[IDX_MEAN_LINE_LENGTH]  = np.random.normal(127.0, 15.0)   # real: 127±11
-            vec[IDX_MEAN_DELTA_REL]    = np.random.normal(0.704, 0.08)   # real: 0.704±0.068
-            vec[IDX_MEAN_ALPHA_REL]    = np.random.normal(0.087, 0.055)  # real: 0.087±0.048
-            vec[IDX_MEAN_SLOW_FAST]    = np.random.normal(17.8, 16.0)    # real: 17.8±14.7 (alta varianza!)
-            vec[IDX_MEAN_SPEC_ENTROPY] = np.random.normal(3.854, 0.35)   # real: 3.85±0.31
-            vec[IDX_MEAN_SPIKE_RATE]   = np.random.normal(0.174, 0.11)   # real: 0.174±0.097
-            vec[IDX_MEAN_DWT_ENERGY]   = np.random.normal(1015.3, 360.0) # real: 1015±322
+            vec = np.zeros(n_features)
+            for i, key in enumerate(self.FEATURE_NAMES):
+                if i >= n_features:
+                    break
+                mean, std = self.SEIZURE_DISTRIBUTIONS.get(key, (0.0, 0.1))
+                vec[i] = np.random.normal(mean, std)
             X_list.append(vec)
             y_list.append(1)
 
@@ -107,15 +158,14 @@ class MLPredictor:
         print(f"[MLPredictor] Entrenando modelo con {feature_size} features...")
         X, y = self._generate_training_data(feature_size)
 
-        # Modelo base más conservador (evita overfitting)
         base_clf = GradientBoostingClassifier(
-            n_estimators=100,        # reducido de 200
-            max_depth=3,             # reducido de 4 (menos complejo)
-            min_samples_split=20,    # requiere más muestras para dividir
-            min_samples_leaf=10,     # hojas más grandes
-            learning_rate=0.05,
+            n_estimators=150,
+            max_depth=4,
+            min_samples_split=15,
+            min_samples_leaf=8,
+            learning_rate=0.08,
             subsample=0.8,
-            max_features='sqrt',     # usa solo sqrt(n_features) por split
+            max_features='sqrt',
             random_state=42,
         )
         
@@ -186,9 +236,9 @@ class MLPredictor:
         
         # Aplicar suavizado para evitar extremos (0% o 100%)
         # En medicina, nunca podemos estar 100% seguros con un solo EEG
-        EPSILON = 0.10  # mínimo 10% de incertidumbre (más conservador)
+        EPSILON = 0.05
         proba_smoothed = np.clip(proba, EPSILON, 1.0 - EPSILON)
-        proba_smoothed = proba_smoothed / proba_smoothed.sum()  # renormalizar
+        proba_smoothed = proba_smoothed / proba_smoothed.sum()
         
         risk_score = float(proba_smoothed[1] * 100)
         

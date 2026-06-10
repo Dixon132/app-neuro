@@ -430,10 +430,46 @@ class EEGProcessor:
             "channel_names": self.channel_names or [f"CH{i+1}" for i in range(n_channels)],
         }
 
+    SELECTED_FEATURE_KEYS = [
+        "mean_kurtosis",
+        "max_kurtosis",
+        "std_kurtosis",
+        "mean_line_length",
+        "max_line_length",
+        "mean_delta_rel",
+        "max_delta_rel",
+        "mean_theta_rel",
+        "mean_alpha_rel",
+        "mean_beta_rel",
+        "mean_gamma_rel",
+        "mean_slow_fast_ratio",
+        "max_slow_fast_ratio",
+        "mean_theta_alpha_ratio",
+        "mean_delta_beta_ratio",
+        "mean_spectral_entropy",
+        "max_spectral_entropy",
+        "mean_permutation_entropy",
+        "mean_sample_entropy",
+        "mean_spike_rate_per_sec",
+        "max_spike_rate_per_sec",
+        "mean_spike_count",
+        "mean_peak_to_peak",
+        "max_peak_to_peak",
+        "mean_variance",
+        "mean_zero_crossings",
+        "mean_rms",
+        "mean_dwt_d0_energy",
+        "mean_dwt_d1_energy",
+        "mean_dwt_d2_energy",
+    ]
+
     def build_feature_vector(self, features: Dict[str, Any]) -> np.ndarray:
-        """Convierte el dict de features agregados en un vector numpy para el modelo."""
+        """Construye vector numpy con features selectos discriminativos."""
         agg = features["aggregated"]
-        vec = np.array(list(agg.values()), dtype=np.float64)
+        values = []
+        for key in self.SELECTED_FEATURE_KEYS:
+            values.append(agg.get(key, 0.0))
+        vec = np.array(values, dtype=np.float64)
         vec = np.nan_to_num(vec, nan=0.0, posinf=0.0, neginf=0.0)
         return vec
 
